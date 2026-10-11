@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model User {
+  id               String        @id // Maps directly to Supabase auth.users.id
+  email            String        @unique
+  stripeCustomerId String?       @unique
+  subscription     Subscription?
+  monitors      Monitor[]
+  
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  stripeSubscriptionId String   @unique
+  stripePriceId        String
+  status               String   // 'active', 'past_due', 'canceled', 'unpaid'
+  
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([stripeSubscriptionId])
+}
+
+enum MonitorStatus {
+  UP
+  DOWN
+  PAUSED
+}
+
+enum MonitorType {
+  HTTP
+  TCP
+  PING
+}
+
+model Monitor {
+  id            String        @id @default(cuid())
+  name          String        // e.g., "Main Production DB", "Router MikroTik Core"
+  target        String        // IP address or URL
+  type          MonitorType   @default(HTTP)
+  interval      Int           @default(5) // Polling interval in minutes
+  status        MonitorStatus @default(PAUSED)
+  lastCheckedAt DateTime?
+  
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  heartbeats    Heartbeat[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model Heartbeat {
+  id            String        @id @default(cuid())
+  responseTime  Int           // Latency in milliseconds
+  statusCode    Int?          // HTTP status code if applicable (200, 502, etc.)
+  isOperational Boolean       // true if UP, false if DOWN or Timeout
+  
+  monitorId     String
+  monitor       Monitor       @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  timestamp     DateTime      @default(now())
+
+  @@index([monitorId])
+  @@index([timestamp])        // Indexing timestamp is crucial for time-series queries
+}
