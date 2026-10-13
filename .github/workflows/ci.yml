@@ -33,6 +33,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      - name: Pre-install CI fixes
+        run: |
+          rm -f pnpm-workspace.yaml
+          echo "only-built-dependencies[]=@prisma/engines" >> .npmrc
+          echo "only-built-dependencies[]=@stripe/cli" >> .npmrc
+          echo "only-built-dependencies[]=prisma" >> .npmrc
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
