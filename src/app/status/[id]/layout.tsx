@@ -8,7 +8,7 @@ export default function PublicStatusLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`${inter.className} min-h-screen bg-gray-50`}>
+    <div className={`${inter.className} min-h-screen bg-transparent`}>
       {children}
     </div>
   );
