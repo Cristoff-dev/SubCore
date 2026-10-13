@@ -1,11 +1,19 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
+import { useFormState, useFormStatus } from "react-dom";
 import { signup } from "@/app/(auth)/login/actions";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+
+type FormState = {
+  error: string | null;
+};
+
+const initialState: FormState = {
+  error: null,
+};
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -22,7 +30,10 @@ function SubmitButton() {
 }
 
 export function SignupForm() {
-  const [error, setError] = useState<string | null>(null);
+  const [state, formAction] = useFormState(signup, initialState);
+  const [oauthError, setOauthError] = useState<string | null>(null);
+
+  const displayError = state?.error || oauthError;
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,21 +50,8 @@ export function SignupForm() {
     });
 
     if (error) {
-      setError(error.message);
+      setOauthError(error.message);
     }
-  };
-
-  const handleSubmit = async (formData: FormData) => {
-    setError(null);
-    const password = formData.get("password") as string;
-    const confirmPassword = formData.get("confirmPassword") as string;
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    await signup(formData);
   };
 
   return (
@@ -67,7 +65,7 @@ export function SignupForm() {
         </p>
       </div>
 
-      <form action={handleSubmit} className="space-y-6">
+      <form action={formAction} className="space-y-6">
         <div>
           <label className="block text-sm font-medium leading-6 text-gray-900 dark:text-gray-200" htmlFor="email">
             Email address
@@ -116,8 +114,10 @@ export function SignupForm() {
           </div>
         </div>
 
-        {error && (
-          <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
+        {displayError && (
+          <div className="p-3 rounded-md bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20">
+            <p className="text-sm text-red-600 dark:text-red-400 text-center">{displayError}</p>
+          </div>
         )}
 
         <div className="pt-2">
